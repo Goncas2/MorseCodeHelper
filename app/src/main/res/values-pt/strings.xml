@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Morse Code Helper</string>
+    <string name="name_tab_1">Letra</string>
+    <string name="name_tab_2">Frase</string>
+    <string name="invalid_input">Apenas insere caracteres A–Z ou 0-9</string>
+    <string name="confirm_button">Confirmar</string>
+    <string name="text_hint">Escreve aqui a tua frase</string>
+</resources>
