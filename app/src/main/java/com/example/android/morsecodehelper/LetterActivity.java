@@ -1,12 +1,11 @@
 package com.example.android.morsecodehelper;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -14,11 +13,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.GridView;
-import android.widget.Toast;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +24,7 @@ public class LetterActivity extends Fragment {
     float speed = (float) 1.0;
     private CameraManager mCameraManager;
     private String mCameraId;
+    private MediaPlayer mp;
     private boolean busy;
 
     @Override
@@ -54,6 +51,8 @@ public class LetterActivity extends Fragment {
             }
         });
 
+        mp = MediaPlayer.create(getContext(), R.raw._440);
+
         return view;
     }
 
@@ -63,6 +62,7 @@ public class LetterActivity extends Fragment {
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler handler = new Handler(Looper.getMainLooper());
+
         if (!busy) {
             executor.execute(() -> {
                 busy = true;
@@ -78,10 +78,16 @@ public class LetterActivity extends Fragment {
     private void doMorseCode(String sequence) {
         for (int i=0; i < sequence.length(); i++){
             if(sequence.charAt(i) == '·'){
+                mp.start();
                 turnOnLight(250);
+                mp.stop();
+                mp = MediaPlayer.create(getContext(), R.raw._440);
             }
             else if (sequence.charAt(i) == '-'){
-                turnOnLight(1000);
+                mp.start();
+                turnOnLight(750);
+                mp.stop();
+                mp = MediaPlayer.create(getContext(), R.raw._440);
             }
         }
     }
@@ -89,25 +95,14 @@ public class LetterActivity extends Fragment {
     private void turnOnLight(long time) {
         try {
             mCameraManager.setTorchMode(mCameraId, true);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
 
-        try {
             TimeUnit.MILLISECONDS.sleep((long)(time*speed));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
-        try {
             mCameraManager.setTorchMode(mCameraId, false);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
 
-        try {
             TimeUnit.MILLISECONDS.sleep((long) (250*speed));
-        } catch (InterruptedException e) {
+
+        } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
     }

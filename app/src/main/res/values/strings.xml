@@ -5,6 +5,7 @@
     <string name="name_tab_2">Phrase</string>
     <string name="invalid_input">Only put characters A–Z and 0-9</string>
     <string name="confirm_button">Confirm</string>
+    <string name="cancel_button">Cancel</string>
     <string name="text_hint">Write your phrase here</string>
 
 </resources>
