@@ -1,12 +1,14 @@
 package com.example.android.morsecodehelper;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -26,7 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 
-public class PhraseActivity extends Fragment implements View.OnClickListener {
+public class PhraseActivity extends Fragment implements View.OnClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
 
     private CameraManager mCameraManager;
     private String mCameraId;
@@ -34,8 +36,10 @@ public class PhraseActivity extends Fragment implements View.OnClickListener {
     private TextView mViewMorseCode;
     private Button confirmButton;
     private MediaPlayer mp;
-    boolean busy;
-    private float speed = (float) 1.0;
+    private boolean busy;
+    private double speed = 1.0;
+    private boolean audio_enabled;
+    private boolean light_enabled;
     private MorseCodeExecutor runnable;
 
 
@@ -49,6 +53,8 @@ public class PhraseActivity extends Fragment implements View.OnClickListener {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+
+        setupPreferences();
     }
 
     @Override
@@ -65,6 +71,17 @@ public class PhraseActivity extends Fragment implements View.OnClickListener {
         mp = MediaPlayer.create(getContext(), R.raw._440);
 
         return view;
+    }
+
+    private void setupPreferences(){
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
+        audio_enabled = sharedPreferences.getBoolean("use_audio", true);
+        light_enabled = sharedPreferences.getBoolean("use_light", true);
+        speed = sharedPreferences.getInt("speed_setting", 100) / 100.0;
+
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
+
     }
 
 
@@ -99,34 +116,64 @@ public class PhraseActivity extends Fragment implements View.OnClickListener {
     }
 
     private String textToMorseCode(String text) {
-        String morseCode = "";
+        StringBuilder morseCode = new StringBuilder();
 
         CharacterIterator it = new StringCharacterIterator(text);
+        String letterCode;
         while (it.current() != CharacterIterator.DONE) {
-            String letterCode = MorseCodes.get(it.current()).getCode();
-            morseCode = morseCode + letterCode + " ";
+            if(MorseCodes.get(it.current()) != null) {
+                letterCode = MorseCodes.get(it.current()).getCode();
+                morseCode.append(letterCode).append(" ");
+            }
             it.next();
         }
 
-        return morseCode;
+        return morseCode.toString();
     }
 
-    private void turnOnLight(long time) {
+    private void turnOnLight(long time, boolean use_audio, boolean use_light, double speed) {
         try {
-            mCameraManager.setTorchMode(mCameraId, true);
+            if (use_light) {
+                mCameraManager.setTorchMode(mCameraId, true);
+            }
+            if (use_audio) {
+                mp.start();
+            }
 
-            TimeUnit.MILLISECONDS.sleep((long)(time*speed));
+            TimeUnit.MILLISECONDS.sleep((long) (time/speed));
 
-            mCameraManager.setTorchMode(mCameraId, false);
+            if (use_light) {
+                mCameraManager.setTorchMode(mCameraId, false);
+            }
+            if (use_audio) {
+                mp.stop();
+                mp = MediaPlayer.create(getContext(), R.raw._440);
+            }
 
-            TimeUnit.MILLISECONDS.sleep((long) (250*speed));
+            TimeUnit.MILLISECONDS.sleep((long) (250/speed));
 
         } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private class MorseCodeExecutor implements Runnable{
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+
+        if (key.equals("use_audio")) {
+            audio_enabled = sharedPreferences.getBoolean(key, true);
+        }
+
+        if (key.equals("use_light")) {
+            light_enabled = sharedPreferences.getBoolean(key, true);
+        }
+
+        if (key.equals("speed_setting")) {
+            speed = sharedPreferences.getInt(key, 100) / 100.0;
+        }
+    }
+
+    private class MorseCodeExecutor implements Runnable {
         private volatile boolean running = true;
         private String sequence;
 
@@ -146,16 +193,10 @@ public class PhraseActivity extends Fragment implements View.OnClickListener {
                     return;
                 }
                 if(sequence.charAt(i) == '·'){
-                    mp.start();
-                    turnOnLight(250);
-                    mp.stop();
-                    mp = MediaPlayer.create(getContext(), R.raw._440);
+                    turnOnLight(250, audio_enabled, light_enabled, speed);
                 }
                 else if (sequence.charAt(i) == '-'){
-                    mp.start();
-                    turnOnLight(750);
-                    mp.stop();
-                    mp = MediaPlayer.create(getContext(), R.raw._440);
+                    turnOnLight(750, audio_enabled, light_enabled, speed);
                 }
                 else if (sequence.charAt(i) == '/'){
                     try { TimeUnit.MILLISECONDS.sleep((long)(500*speed)); }
@@ -166,7 +207,7 @@ public class PhraseActivity extends Fragment implements View.OnClickListener {
                     catch (InterruptedException e) { e.printStackTrace(); }
                 }
             }
-            Objects.requireNonNull(getActivity()).runOnUiThread(new Runnable() {
+            getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     confirmButton.setText(R.string.confirm_button);
@@ -174,5 +215,12 @@ public class PhraseActivity extends Fragment implements View.OnClickListener {
                 }
             });
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        PreferenceManager.getDefaultSharedPreferences(getActivity())
+                .unregisterOnSharedPreferenceChangeListener(this);
     }
 }

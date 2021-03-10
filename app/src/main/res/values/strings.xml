@@ -7,5 +7,10 @@
     <string name="confirm_button">Confirm</string>
     <string name="cancel_button">Cancel</string>
     <string name="text_hint">Write your phrase here</string>
+    <string name="action_settings">Settings</string>
+«
+    <string name="use_audio">Play audio</string>
+    <string name="use_light">Use the flashlight</string>
+    <string name="speed">Speed (%)</string>
 
 </resources>

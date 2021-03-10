@@ -1,0 +1,23 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="use_audio"
+        android:title="@string/use_audio" />
+
+    <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="use_light"
+        android:title="@string/use_light" />
+
+    <SeekBarPreference
+        android:id="@+id/sb_speed"
+        android:defaultValue="100"
+        android:key="speed_setting"
+        android:max="300"
+        app:min="50"
+        android:title="@string/speed"
+        app:showSeekBarValue="true" />
+
+</PreferenceScreen>

@@ -1,8 +1,10 @@
 package com.example.android.morsecodehelper;
 
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.media.MediaPlayer;
@@ -19,13 +21,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class LetterActivity extends Fragment {
+public class LetterActivity extends Fragment implements SharedPreferences.OnSharedPreferenceChangeListener{
 
-    float speed = (float) 1.0;
+    double speed = 1.0;
     private CameraManager mCameraManager;
     private String mCameraId;
     private MediaPlayer mp;
     private boolean busy;
+    private boolean audio_enabled;
+    private boolean light_enabled;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -37,6 +42,8 @@ public class LetterActivity extends Fragment {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+
+        setupPreferences();
     }
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -56,6 +63,17 @@ public class LetterActivity extends Fragment {
         return view;
     }
 
+    private void setupPreferences(){
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
+        audio_enabled = sharedPreferences.getBoolean("use_audio", true);
+        light_enabled = sharedPreferences.getBoolean("use_light", true);
+        speed = sharedPreferences.getInt("speed_setting", 100) / 100.0;
+
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
+
+    }
+
     private void onClickHandler(GridView view, int position){
         char character = (char)view.getAdapter().getItem(position);
         String code = MorseCodes.get(character).getCode();
@@ -66,7 +84,7 @@ public class LetterActivity extends Fragment {
         if (!busy) {
             executor.execute(() -> {
                 busy = true;
-                doMorseCode(code);
+                doMorseCode(code, audio_enabled, light_enabled, speed);
                 handler.post(() -> {
                     busy = false;
                 });
@@ -75,35 +93,66 @@ public class LetterActivity extends Fragment {
     }
 
 
-    private void doMorseCode(String sequence) {
+    private void doMorseCode(String sequence, boolean use_audio, boolean use_light, double speed) {
+        int time = 0;
         for (int i=0; i < sequence.length(); i++){
-            if(sequence.charAt(i) == '·'){
-                mp.start();
-                turnOnLight(250);
-                mp.stop();
-                mp = MediaPlayer.create(getContext(), R.raw._440);
-            }
-            else if (sequence.charAt(i) == '-'){
-                mp.start();
-                turnOnLight(750);
-                mp.stop();
-                mp = MediaPlayer.create(getContext(), R.raw._440);
-            }
+
+            if(sequence.charAt(i) == '·')
+                time = 250;
+            else if (sequence.charAt(i) == '-')
+                time = 750;
+
+            doBeep(time, use_audio, use_light, speed);
+
         }
     }
 
-    private void turnOnLight(long time) {
+    private void doBeep(long time, boolean use_audio, boolean use_light, double speed) {
         try {
-            mCameraManager.setTorchMode(mCameraId, true);
+            if (use_light) {
+                mCameraManager.setTorchMode(mCameraId, true);
+            }
+            if (use_audio) {
+                mp.start();
+            }
 
-            TimeUnit.MILLISECONDS.sleep((long)(time*speed));
+            TimeUnit.MILLISECONDS.sleep((long) (time/speed));
 
-            mCameraManager.setTorchMode(mCameraId, false);
+            if (use_light) {
+                mCameraManager.setTorchMode(mCameraId, false);
+            }
+            if (use_audio) {
+                mp.stop();
+                mp = MediaPlayer.create(getContext(), R.raw._440);
+            }
 
-            TimeUnit.MILLISECONDS.sleep((long) (250*speed));
+            TimeUnit.MILLISECONDS.sleep((long) (250/speed));
 
         } catch (CameraAccessException | InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+
+        if (key.equals("use_audio")) {
+            audio_enabled = sharedPreferences.getBoolean(key, true);
+        }
+
+        if (key.equals("use_light")) {
+            light_enabled = sharedPreferences.getBoolean(key, true);
+        }
+
+        if (key.equals("speed_setting")) {
+            speed = sharedPreferences.getInt(key, 100) / 100.0;
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        PreferenceManager.getDefaultSharedPreferences(getActivity())
+                .unregisterOnSharedPreferenceChangeListener(this);
     }
 }

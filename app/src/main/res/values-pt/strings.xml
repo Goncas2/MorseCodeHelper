@@ -7,4 +7,10 @@
     <string name="confirm_button">Confirmar</string>
     <string name="cancel_button">Cancelar</string>
     <string name="text_hint">Escreve aqui a tua frase</string>
+    <string name="action_settings">Definições</string>
+
+    <string name="use_audio">Reproduzir audio</string>
+    <string name="use_light">Usar a lanterna</string>
+    <string name="speed">Velocidade  (%)</string>
+
 </resources>
